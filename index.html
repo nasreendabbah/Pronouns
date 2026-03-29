@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>משחק התאמה: זה וזאת</title>
+    <!-- טעינת סגנונות עיצוב (Tailwind CSS) ישירות מהאינטרנט -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* הגדרת אנימציית רעידה כשיש טעות */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+        }
+        .shake {
+            animation: shake 0.4s ease-in-out;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 to-purple-50 min-h-screen flex flex-col items-center py-8 px-4 overflow-x-hidden">
+
+    <!-- מסך המשחק -->
+    <div id="game-screen" class="w-full max-w-4xl flex flex-col items-center">
+        
+        <!-- סרגל עליון -->
+        <div class="w-full flex justify-between items-center mb-8 bg-white p-4 rounded-2xl shadow-sm">
+            <div class="flex items-center gap-2 text-xl font-bold text-gray-700">
+                <span class="text-2xl">⭐</span>
+                <span>ניקוד: <span id="score-display">0</span></span>
+            </div>
+            <div class="text-lg font-bold text-gray-500">
+                מילה <span id="current-word-num">1</span> מתוך 10
+            </div>
+        </div>
+
+        <h2 class="text-3xl font-black text-gray-800 mb-8 text-center">
+            הַתְאִימוּ אֶת הַמִּילָה לַתֵּיבָה הַנְּכוֹנָה!
+        </h2>
+
+        <!-- אזור מרכזי: כפתורים וכרטיסייה -->
+        <div class="w-full flex flex-col md:flex-row items-center justify-center gap-8 relative">
+            
+            <!-- כפתור זֶה -->
+            <button onclick="handleGuess('זֶה')" class="w-full md:w-1/3 bg-blue-100 hover:bg-blue-200 border-4 border-blue-400 rounded-3xl p-8 flex flex-col items-center justify-center transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95 group">
+                <div class="text-5xl font-black text-blue-700 mb-2">זֶה</div>
+                <div class="text-xl font-bold text-blue-500 bg-white px-4 py-1 rounded-full group-hover:bg-blue-50">זָכָר 👦</div>
+            </button>
+
+            <!-- הכרטיסייה עם המילה -->
+            <div id="word-card" class="w-full md:w-1/3 z-10 bg-white border-4 border-gray-200 rounded-[3rem] p-8 flex flex-col items-center justify-center min-h-[300px] shadow-2xl transition-all duration-300 transform relative overflow-hidden">
+                
+                <!-- שכבות משוב (מוסתרות כברירת מחדל) -->
+                <div id="feedback-correct" class="hidden absolute inset-0 bg-green-500/20 flex items-center justify-center z-20">
+                    <span class="text-[8rem]">✔️</span>
+                </div>
+                <div id="feedback-wrong" class="hidden absolute inset-0 bg-red-500/20 flex items-center justify-center z-20">
+                    <span class="text-[8rem]">❌</span>
+                </div>
+
+                <div id="emoji-display" class="text-[6rem] leading-none mb-4 drop-shadow-md select-none transition-transform duration-300 hover:scale-110">
+                    <!-- האימוג'י יופיע כאן -->
+                </div>
+                <div id="word-display" class="text-5xl font-black text-gray-800 text-center">
+                    <!-- המילה תופיע כאן -->
+                </div>
+            </div>
+
+            <!-- כפתור זֹאת -->
+            <button onclick="handleGuess('זֹאת')" class="w-full md:w-1/3 bg-pink-100 hover:bg-pink-200 border-4 border-pink-400 rounded-3xl p-8 flex flex-col items-center justify-center transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95 group">
+                <div class="text-5xl font-black text-pink-700 mb-2">זֹאת</div>
+                <div class="text-xl font-bold text-pink-500 bg-white px-4 py-1 rounded-full group-hover:bg-pink-50">נְקֵבָה 👧</div>
+            </button>
+
+        </div>
+
+        <div class="mt-12 text-center text-gray-500 text-lg font-bold bg-white/50 px-6 py-3 rounded-full">
+            לחצו על התיבה הכחולה לזכר, ועל התיבה הורודה לנקבה.
+        </div>
+    </div>
+
+    <!-- מסך סיום (מוסתר כברירת מחדל) -->
+    <div id="end-screen" class="hidden flex-col items-center justify-center flex-1 w-full">
+        <div class="bg-white rounded-3xl p-10 text-center shadow-2xl max-w-md w-full">
+            <div class="text-[6rem] mx-auto text-yellow-500 mb-6 drop-shadow-lg">🏆</div>
+            <h1 class="text-5xl font-black text-gray-800 mb-4">כָּל הַכָּבוֹד!</h1>
+            <p class="text-2xl text-gray-600 mb-8">
+                סיימת את המשחק!<br/>
+                הניקוד שלך: <span id="final-score" class="font-bold text-green-500">0</span> נקודות
+            </p>
+            <button onclick="initGame()" class="flex items-center justify-center gap-2 w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl text-2xl font-bold hover:from-purple-600 hover:to-indigo-600 transition-all shadow-lg hover:shadow-xl">
+                <span>🔄</span> שַׂחֵק שׁוּב
+            </button>
+        </div>
+    </div>
+
+    <!-- הלוגיקה של המשחק (JavaScript) -->
+    <script>
+        const allWords = [
+            { id: 1, word: 'יֶלֶד', emoji: '👦', type: 'זֶה' },
+            { id: 2, word: 'סֵפֶר', emoji: '📖', type: 'זֶה' },
+            { id: 3, word: 'כֶּלֶב', emoji: '🐶', type: 'זֶה' },
+            { id: 4, word: 'עִפָּרוֹן', emoji: '✏️', type: 'זֶה' },
+            { id: 5, word: 'תַּפּוּחַ', emoji: '🍎', type: 'זֶה' },
+            { id: 6, word: 'בַּיִת', emoji: '🏠', type: 'זֶה' },
+            { id: 7, word: 'יַלְדָּה', emoji: '👧', type: 'זֹאת' },
+            { id: 8, word: 'מוֹרָה', emoji: '👩‍🏫', type: 'זֹאת' },
+            { id: 9, word: 'מְכוֹנִית', emoji: '🚗', type: 'זֹאת' },
+            { id: 10, word: 'מַלְכָּה', emoji: '👑', type: 'זֹאת' },
+            { id: 11, word: 'חָתוּלָה', emoji: '🐱', type: 'זֹאת' },
+            { id: 12, word: 'מַחְבֶּרֶת', emoji: '📓', type: 'זֹאת' },
+            { id: 13, word: 'לוּחַ', emoji: '📋', type: 'זֶה' },
+            { id: 14, word: 'סָבְתָא', emoji: '👵', type: 'זֹאת' },
+            { id: 15, word: 'נֶכְדָּה', emoji: '👱‍♀️', type: 'זֹאת' },
+            { id: 16, word: 'עֵץ', emoji: '🌳', type: 'זֶה' },
+            { id: 17, word: 'אָחוֹת', emoji: '👩', type: 'זֹאת' }
+        ];
+
+        let gameWords = [];
+        let currentIndex = 0;
+        let score = 0;
+        let isWaiting = false;
+
+        // פונקציה לערבוב המערך
+        function shuffleArray(array) {
+            let shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // התחלת המשחק
+        function initGame() {
+            // בוחרים 10 מילים אקראיות
+            gameWords = shuffleArray(allWords).slice(0, 10);
+            currentIndex = 0;
+            score = 0;
+            isWaiting = false;
+
+            document.getElementById('end-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            document.getElementById('score-display').innerText = score;
+            
+            updateCard();
+        }
+
+        // עדכון הכרטיסייה עם המילה הנוכחית
+        function updateCard() {
+            if (currentIndex >= gameWords.length) {
+                endGame();
+                return;
+            }
+
+            const currentWord = gameWords[currentIndex];
+            document.getElementById('word-display').innerText = currentWord.word;
+            document.getElementById('emoji-display').innerText = currentWord.emoji;
+            document.getElementById('current-word-num').innerText = currentIndex + 1;
+        }
+
+        // בדיקת התשובה של המשתמש
+        function handleGuess(guessType) {
+            if (isWaiting) return; // מניעת לחיצה כפולה
+            
+            isWaiting = true;
+            const currentWord = gameWords[currentIndex];
+            const cardElement = document.getElementById('word-card');
+
+            if (guessType === currentWord.type) {
+                // תשובה נכונה
+                score += 10;
+                document.getElementById('score-display').innerText = score;
+                document.getElementById('feedback-correct').classList.remove('hidden');
+                cardElement.classList.add('border-green-400', 'shadow-green-200', 'scale-110');
+                
+                setTimeout(() => {
+                    document.getElementById('feedback-correct').classList.add('hidden');
+                    cardElement.classList.remove('border-green-400', 'shadow-green-200', 'scale-110');
+                    currentIndex++;
+                    updateCard();
+                    isWaiting = false;
+                }, 1000);
+
+            } else {
+                // תשובה שגויה
+                document.getElementById('feedback-wrong').classList.remove('hidden');
+                cardElement.classList.add('shake', 'border-red-400', 'shadow-red-200');
+                
+                setTimeout(() => {
+                    document.getElementById('feedback-wrong').classList.add('hidden');
+                    cardElement.classList.remove('shake', 'border-red-400', 'shadow-red-200');
+                    isWaiting = false;
+                }, 800);
+            }
+        }
+
+        // סיום המשחק
+        function endGame() {
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+        }
+
+        // הפעלת המשחק כשהדף עולה
+        window.onload = initGame;
+    </script>
+</body>
+</html>
